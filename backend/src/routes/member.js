@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { HttpError, intParam, notFound, page, requiredString } from '../lib/http.js';
+import { withTransaction } from '../db.js';
+import { queueR2Delete } from '../lib/cleanup.js';
 import { toBooleanQuery } from '../lib/search.js';
 import {
   PLAYABLE,
@@ -452,6 +454,21 @@ export function memberRouter(deps) {
     await db.query("UPDATE uploads SET status = 'uploaded' WHERE id = ? AND status = 'awaiting_upload'", [id]);
     await dispatcher.uploadReady(id);
     res.json({ id, status: 'uploaded' });
+  });
+
+  // Possible until the processor claims it. The lock stops the two racing.
+  router.delete('/uploads/:id', async (req, res) => {
+    const id = intParam(req.params.id);
+    await withTransaction(db, async (conn) => {
+      const [[upload]] = await conn.query('SELECT * FROM uploads WHERE id = ? AND user_id = ? FOR UPDATE', [id, req.user.id]);
+      if (!upload) throw notFound('Upload not found');
+      if (!['awaiting_upload', 'uploaded'].includes(upload.status)) {
+        throw new HttpError(409, "It's already being processed, so it can't be cancelled");
+      }
+      await queueR2Delete(conn, upload.inbox_r2_key, 'cancelled');
+      await conn.query('DELETE FROM uploads WHERE id = ?', [id]);
+    });
+    res.sendStatus(204);
   });
 
   router.get('/uploads/mine', async (req, res) => {

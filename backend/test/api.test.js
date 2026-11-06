@@ -166,6 +166,25 @@ describe('Audify API', () => {
       await t.db.query("UPDATE track_files SET sha256 = ? WHERE kind = 'opus' AND track_id IN (?)", ['f'.repeat(64), [a.trackId, b.trackId]]);
     });
 
+    it('cancels an upload and removes its file', async () => {
+      const { body } = await t.call('POST', '/uploads', { as: MEMBER, body: { filename: 'a.mp3', size_bytes: 10 } });
+      assert.equal((await t.call('DELETE', `/uploads/${body.id}`, { as: OWNER })).status, 404, "not someone else's upload");
+      assert.equal((await t.call('DELETE', `/uploads/${body.id}`, { as: MEMBER })).status, 204);
+      assert.equal((await t.call('GET', '/uploads/mine', { as: MEMBER })).body.items.length, 0);
+      await drainCleanupQueue(t.deps);
+      assert.equal(t.deleted.length, 1);
+    });
+
+    it('can still cancel while waiting for processing, but not after', async () => {
+      const { body } = await t.call('POST', '/uploads', { as: MEMBER, body: { filename: 'a.mp3', size_bytes: 10 } });
+      await t.call('POST', `/uploads/${body.id}/complete`, { as: MEMBER });
+      await t.call('POST', `/internal/processor/uploads/${body.id}/claim`, { token: SERVICE });
+      assert.equal((await t.call('DELETE', `/uploads/${body.id}`, { as: MEMBER })).status, 409);
+      const second = await t.call('POST', '/uploads', { as: MEMBER, body: { filename: 'b.mp3', size_bytes: 10 } });
+      await t.call('POST', `/uploads/${second.body.id}/complete`, { as: MEMBER });
+      assert.equal((await t.call('DELETE', `/uploads/${second.body.id}`, { as: MEMBER })).status, 204);
+    });
+
     it('rejects /result writing outside its own prefix', async () => {
       const created = await t.call('POST', '/uploads', { as: MEMBER, body: { filename: 'x.mp3', size_bytes: 10 } });
       const id = created.body.id;

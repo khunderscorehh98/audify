@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { PULL_THRESHOLD, canPullOn, isVerticalPull, pullDistance } from '../src/lib/pullRules.js';
+import { PULL_THRESHOLD, SWIPE_CANCEL_DISTANCE, canPullOn, isVerticalPull, pullDistance, swipeCancels, swipeOffset } from '../src/lib/pullRules.js';
 
 describe('pull to refresh', () => {
   it('needs a deliberate pull to trigger', () => {
@@ -25,3 +25,17 @@ describe('pull to refresh', () => {
     assert.equal(canPullOn('/upload'), false);
   });
 });
+
+describe('swipe left to cancel', () => {
+  it('only moves left', () => {
+    assert.equal(swipeOffset(50), 0);
+    assert.equal(swipeOffset(-50), -50);
+  });
+
+  it('cancels only after a deliberate swipe', () => {
+    assert.equal(swipeCancels(swipeOffset(-(SWIPE_CANCEL_DISTANCE - 1))), false);
+    assert.equal(swipeCancels(swipeOffset(-SWIPE_CANCEL_DISTANCE)), true);
+    assert.equal(swipeCancels(swipeOffset(-300)), true);
+  });
+});
+
