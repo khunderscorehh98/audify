@@ -27,3 +27,16 @@ coverage/
 *.ogg
 *.opus
 *.webm
+
+# Logs and generated files
+*.log
+dev-dist/
+*.sql.gz
+
+# Editor and OS
+.vscode/
+.claude/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
