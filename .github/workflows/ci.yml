@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        ports: ['3306:3306']
+        # Full-text settings must match production my.cnf (patch 1, B4).
+        options: >-
+          --health-cmd="mysqladmin ping" --health-interval=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Apply MySQL settings
+        run: |
+          printf '[mysqld]\ninnodb_ft_min_token_size=1\ninnodb_ft_enable_stopword=OFF\ndefault-time-zone=+00:00\n' > audify.cnf
+          container=$(docker ps --filter ancestor=mysql:8.0 --format '{{.ID}}')
+          docker cp audify.cnf "$container":/etc/mysql/conf.d/audify.cnf
+          docker restart "$container"
+          until mysqladmin -h127.0.0.1 -uroot ping --silent; do sleep 2; done
+      - run: npm ci
+        working-directory: backend
+      - run: npm test
+        working-directory: backend
+
+  processor:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: processor/package-lock.json
+      - run: npm ci
+        working-directory: processor
+      - run: npm test
+        working-directory: processor
+
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend

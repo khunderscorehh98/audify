@@ -1,0 +1,11 @@
+# Copy to /etc/mysql/conf.d/audify.cnf BEFORE loading the schema.
+# The two innodb_ft_* lines shape the FULLTEXT indexes, so changing them later
+# means rebuilding those indexes (patch 1, B4).
+[mysqld]
+bind-address = 127.0.0.1
+performance_schema = OFF
+innodb_buffer_pool_size = 96M
+max_connections = 25
+innodb_ft_min_token_size = 1
+innodb_ft_enable_stopword = OFF
+default-time-zone = '+00:00'

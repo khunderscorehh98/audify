@@ -1,0 +1,47 @@
+# Converts and labels uploads. This repo is public, so these logs are public:
+# the processor prints upload IDs only. Never add a pull_request trigger here.
+name: Process uploads
+
+on:
+  repository_dispatch:
+    types: [upload-ready]
+  schedule:
+    - cron: '17 19 * * *' # Safety net for missed dispatches
+  workflow_dispatch:
+    inputs:
+      upload_id:
+        description: 'One upload ID (leave empty for all waiting uploads)'
+        required: false
+
+concurrency:
+  group: audify-processor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: processor/package-lock.json
+      - name: Install ffmpeg and Chromaprint
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libchromaprint-tools
+      - run: npm ci
+        working-directory: processor
+      - name: Process
+        working-directory: processor
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PROCESSOR_SERVICE_TOKEN: ${{ secrets.PROCESSOR_SERVICE_TOKEN }}
+          ACOUSTID_API_KEY: ${{ secrets.ACOUSTID_API_KEY }}
+          MUSICBRAINZ_CONTACT: ${{ secrets.MUSICBRAINZ_CONTACT }}
+          # Passed through env, never interpolated into the script.
+          UPLOAD_ID: ${{ github.event.client_payload.upload_id || github.event.inputs.upload_id }}
+        run: node src/index.js $UPLOAD_ID
