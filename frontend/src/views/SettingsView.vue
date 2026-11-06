@@ -31,7 +31,7 @@ function toggleLossless() {
       <span class="avatar title" style="width: 72px; height: 72px">{{ session.user?.display_name?.charAt(0)?.toUpperCase() }}</span>
       <div class="grow">
         <div class="heading truncate">{{ session.user?.display_name }}</div>
-        <div class="muted">{{ session.isAdmin ? 'Admin' : 'Member' }} · signed in with Google</div>
+        <div class="muted">{{ session.isAdmin ? 'Admin' : 'Member' }} · signed in</div>
       </div>
     </div>
 

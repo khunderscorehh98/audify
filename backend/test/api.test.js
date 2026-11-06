@@ -51,6 +51,21 @@ describe('Audify API', () => {
       assert.equal(second.body.status, 'pending');
     });
 
+    it('makes the owner admin once their email is verified', async () => {
+      await t.db.query("INSERT INTO users (firebase_uid, display_name, email) VALUES ('dev-owner@example.com', 'Owner', 'owner@example.com')");
+      const owner = await t.call('GET', '/me', { as: OWNER });
+      assert.deepEqual([owner.body.role, owner.body.status], ['admin', 'approved']);
+    });
+
+    it('never upgrades someone else, or a blocked owner', async () => {
+      await t.call('GET', '/me', { as: OWNER });
+      const other = await t.call('GET', '/me', { as: 'new@example.com' });
+      assert.equal(other.body.role, 'member');
+      await t.db.query("UPDATE users SET role = 'member', status = 'blocked' WHERE email = 'owner@example.com'");
+      const blocked = await t.call('GET', '/me', { as: OWNER });
+      assert.equal(blocked.body.status, 'blocked');
+    });
+
     it('new users are pending and locked out', async () => {
       const me = await t.call('GET', '/me', { as: 'new@example.com' });
       assert.equal(me.body.status, 'pending');

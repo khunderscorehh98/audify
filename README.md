@@ -97,7 +97,7 @@ cd frontend && npm test && npm run build
 
 ## Going live
 
-1. **Accounts.** Create a Firebase project with Google sign-in, an R2 bucket and a backups bucket, a $4 droplet with backups on, and an AcoustID API key.
+1. **Accounts.** Create a Firebase project with Google and Email/Password sign-in, an R2 bucket and a backups bucket, a $4 droplet with backups on, and an AcoustID API key.
 2. **Droplet.** Clone to `/opt/audify` and run `sudo ADMIN_USER=<you> bash infra/setup-droplet.sh`.
 3. **Database.** Load `db/schema.sql`, then the patches, and create an `audify` MySQL user for that database only.
 4. **Certificate.** Staging first, then again without `--staging`:

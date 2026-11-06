@@ -34,13 +34,49 @@ export async function currentUser() {
   return auth.currentUser;
 }
 
-export async function signIn(email) {
-  if (DEV) {
-    localStorage.setItem(DEV_KEY, email);
-    return;
-  }
+/** Development sign-in only: the email is the whole identity. */
+export const devSignIn = (email) => localStorage.setItem(DEV_KEY, email);
+
+export async function signInWithGoogle() {
   const { auth, module } = await loadFirebase();
   await module.signInWithRedirect(auth, new module.GoogleAuthProvider());
+}
+
+export async function signInWithEmail(email, password) {
+  const { auth, module } = await loadFirebase();
+  await module.signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function createAccount(email, password) {
+  const { auth, module } = await loadFirebase();
+  const { user } = await module.createUserWithEmailAndPassword(auth, email, password);
+  await module.sendEmailVerification(user);
+}
+
+export async function resetPassword(email) {
+  const { auth, module } = await loadFirebase();
+  await module.sendPasswordResetEmail(auth, email);
+}
+
+export async function resendVerification() {
+  if (DEV) return;
+  const { auth, module } = await loadFirebase();
+  if (auth.currentUser) await module.sendEmailVerification(auth.currentUser);
+}
+
+export async function needsVerification() {
+  if (DEV) return false;
+  const { auth } = await loadFirebase();
+  return auth.currentUser ? !auth.currentUser.emailVerified : false;
+}
+
+/** After clicking the email link, a fresh token is what tells the server. */
+export async function refreshIdentity() {
+  if (DEV) return;
+  const { auth } = await loadFirebase();
+  if (!auth.currentUser) return;
+  await auth.currentUser.reload();
+  await auth.currentUser.getIdToken(true);
 }
 
 export async function signOut() {

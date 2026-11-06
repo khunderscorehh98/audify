@@ -1,14 +1,28 @@
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import Icon from '../components/Icon.vue';
 import SignOutButton from '../components/SignOutButton.vue';
+import * as auth from '../lib/auth.js';
 import { useSession } from '../stores/session.js';
 
 const session = useSession();
 const checking = ref(false);
+const unverified = ref(false);
+const resent = ref(false);
+
+onMounted(async () => {
+  unverified.value = await auth.needsVerification();
+});
+
+async function resend() {
+  await auth.resendVerification().catch(() => {});
+  resent.value = true;
+}
 
 async function check() {
   checking.value = true;
+  await auth.refreshIdentity().catch(() => {});
+  unverified.value = await auth.needsVerification();
   await session.refresh().catch(() => {});
   checking.value = false;
 }
@@ -29,6 +43,10 @@ async function check() {
       </div>
     </div>
     <div class="stack" style="width: 100%">
+      <div v-if="unverified" class="notice quiet" style="text-align: left">
+        <span class="grow">Please verify your email using the link we sent you. Check your spam folder too.</span>
+        <button class="btn small outline" :disabled="resent" @click="resend">{{ resent ? 'Sent' : 'Resend' }}</button>
+      </div>
       <button class="btn outline block" :disabled="checking" @click="check">Check again</button>
       <SignOutButton button-class="btn block accent" />
     </div>

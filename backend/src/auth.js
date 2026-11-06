@@ -40,22 +40,35 @@ const bearerToken = (req) => {
  * Finds the users row for a verified token, creating it on first sign-in.
  * The admin bootstrap only runs while no admin exists (patch 1, B1).
  */
+async function mayBecomeFirstAdmin(db, config, claims) {
+  const email = claims.email ? String(claims.email).toLowerCase() : null;
+  // Verified, or anyone could register with the owner's address and take over.
+  if (!config.adminBootstrapEmail || email !== config.adminBootstrapEmail || claims.email_verified !== true) {
+    return false;
+  }
+  const [admins] = await db.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
+  return !admins.length;
+}
+
 export async function findOrCreateUser(db, config, claims) {
   const [rows] = await db.query('SELECT * FROM users WHERE firebase_uid = ?', [claims.uid]);
-  if (rows.length) return rows[0];
+  if (rows.length) {
+    // Email sign-ups arrive unverified, so their row exists before the link is clicked.
+    if (rows[0].status !== 'pending' || !(await mayBecomeFirstAdmin(db, config, claims))) return rows[0];
+    await db.query(
+      "UPDATE users SET role = 'admin', status = 'approved', approved_at = UTC_TIMESTAMP() WHERE id = ?",
+      [rows[0].id],
+    );
+    const [upgraded] = await db.query('SELECT * FROM users WHERE id = ?', [rows[0].id]);
+    return upgraded[0];
+  }
 
   const email = claims.email ? String(claims.email).toLowerCase() : null;
   const displayName = (claims.name || (email ? email.split('@')[0] : 'New user')).slice(0, 100);
 
-  let role = 'member';
-  let status = 'pending';
-  if (config.adminBootstrapEmail && email === config.adminBootstrapEmail && claims.email_verified === true) {
-    const [admins] = await db.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
-    if (!admins.length) {
-      role = 'admin';
-      status = 'approved';
-    }
-  }
+  const firstAdmin = await mayBecomeFirstAdmin(db, config, claims);
+  const role = firstAdmin ? 'admin' : 'member';
+  const status = firstAdmin ? 'approved' : 'pending';
 
   // INSERT IGNORE-style upsert: two tabs signing in at once must not 500.
   await db.query(
