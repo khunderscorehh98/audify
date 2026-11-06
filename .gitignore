@@ -1,0 +1,29 @@
+# Secrets (patch 3 §9)
+.env
+.env.*
+!.env.example
+!.env.development.example
+*service-account*.json
+
+# Private material, never in the public repo
+confidential/
+design/
+
+# Local scratch
+.tmp/
+.dev-storage/
+
+# Build output and dependencies
+node_modules/
+dist/
+coverage/
+.firebase/
+
+# Audio never goes in the repo
+*.mp3
+*.flac
+*.m4a
+*.wav
+*.ogg
+*.opus
+*.webm
