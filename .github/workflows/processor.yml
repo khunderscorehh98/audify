@@ -32,7 +32,11 @@ jobs:
           cache: npm
           cache-dependency-path: processor/package-lock.json
       - name: Install ffmpeg and Chromaprint
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libchromaprint-tools
+        # Skips optional packages and the man page rebuild, which can take minutes.
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg libchromaprint-tools
       - run: npm ci
         working-directory: processor
       - name: Process
