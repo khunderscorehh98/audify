@@ -6,7 +6,7 @@ const ip = (address, internal = false) => ({ address, family: 'IPv4', internal }
 
 const adapters = {
   Ethernet: [ip('192.168.1.20'), { address: 'fe80::1', family: 'IPv6', internal: false }],
-  NordLynx: [ip('10.5.0.2')],
+  'WireGuard Tunnel': [ip('10.5.0.2')],
   'vEthernet (WSL)': [ip('172.20.0.1')],
   'Loopback Pseudo-Interface 1': [ip('127.0.0.1', true)],
   Public: [ip('203.0.113.9')],
@@ -29,6 +29,11 @@ describe('network access', () => {
 
   it('skips VPN, virtual, loopback and public addresses', () => {
     assert.deepEqual(lanAddresses(adapters), ['192.168.1.20']);
+  });
+
+  it('prefers a home network address over other private ranges', () => {
+    const found = lanAddresses({ 'Unnamed Adapter': [ip('10.8.0.2')], Ethernet: [ip('192.168.1.20')] });
+    assert.deepEqual(found, ['192.168.1.20', '10.8.0.2']);
   });
 
   it('lets LAN_IP override detection', () => {

@@ -6,7 +6,7 @@ const num = (value, fallback) => {
   return value === undefined || value === '' || Number.isNaN(parsed) ? fallback : parsed;
 };
 
-const VIRTUAL_ADAPTER = /vethernet|wsl|hyper-v|vmware|virtualbox|docker|nordlynx|openvpn|vpn|tailscale|zerotier|loopback/i;
+const VIRTUAL_ADAPTER = /vethernet|wsl|hyper-v|vmware|virtualbox|docker|wireguard|openvpn|vpn|tailscale|zerotier|loopback/i;
 const PRIVATE_IP = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
 /** This machine's real LAN addresses, skipping VPN and virtual adapters. */
@@ -15,7 +15,9 @@ export function lanAddresses(interfaces = os.networkInterfaces()) {
     .filter(([name]) => !VIRTUAL_ADAPTER.test(name))
     .flatMap(([, addresses]) => addresses)
     .filter((address) => address.family === 'IPv4' && !address.internal && PRIVATE_IP.test(address.address))
-    .map((address) => address.address);
+    .map((address) => address.address)
+    // Home networks are usually 192.168.x.x. VPNs often use other private ranges.
+    .sort((a, b) => Number(b.startsWith('192.168.')) - Number(a.startsWith('192.168.')));
 }
 
 export function loadConfig(env = process.env, interfaces = undefined) {

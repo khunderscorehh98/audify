@@ -2,7 +2,7 @@
 
 A private music streaming PWA for a family: one shared music pool, personal playlists, offline listening in the car, and uploads approved by an admin. Non-commercial. It runs on about $4.80 a month.
 
-![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/khunderscorehh98/audify/actions/workflows/ci.yml/badge.svg)
 
 ## Architecture
 
@@ -79,11 +79,13 @@ npm run dev:lan   # also reachable from other devices on your network
 
 `dev:lan` prints the address to open on your phone. Use it on a network you trust: with development sign-in, anyone who can reach it can sign in as any email, including the admin. Over plain `http://` on a network, browsers remove the features behind saving offline, so that part only works on `localhost` or the live HTTPS site. If the phone can't connect, allow Node through Windows Firewall for private networks, and check your VPN isn't blocking local devices. If the wrong address is picked, set `LAN_IP` in `backend/.env.development`.
 
-To process uploads locally, install ffmpeg and run this from `processor/`:
+To process uploads locally, install ffmpeg, keep `npm run dev` running, and run this from the project root after each upload:
 
 ```bash
-API_BASE_URL=http://localhost:3000 PROCESSOR_SERVICE_TOKEN=dev-service-token npm start
+npm run process
 ```
+
+To use Autocomplete in Edit labels, set `MUSICBRAINZ_CONTACT` to your email in `backend/.env.development`.
 
 ## Running the tests
 

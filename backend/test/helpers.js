@@ -95,7 +95,7 @@ export async function startTestApp(overrides = {}) {
 }
 
 export const OWNER = 'owner@example.com';
-export const MEMBER = 'danial@example.com';
+export const MEMBER = 'member@example.com';
 export const SERVICE = 'service-secret';
 
 /** Signs in the owner and an approved member. */
