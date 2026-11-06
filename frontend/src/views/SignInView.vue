@@ -10,6 +10,7 @@ const session = useSession();
 const mode = ref('signIn'); // signIn | create | reset
 const email = ref(auth.devAuth ? 'owner@example.com' : '');
 const password = ref('');
+const confirmPassword = ref('');
 const busy = ref(false);
 const error = ref('');
 const notice = ref('');
@@ -18,6 +19,7 @@ const title = computed(() => ({ signIn: 'Sign in', create: 'Create account', res
 
 function switchTo(next) {
   mode.value = next;
+  confirmPassword.value = '';
   error.value = '';
   notice.value = '';
 }
@@ -42,6 +44,10 @@ function submit() {
   }
   if (mode.value === 'create' && password.value.length < MIN_PASSWORD) {
     error.value = `Use at least ${MIN_PASSWORD} characters.`;
+    return undefined;
+  }
+  if (mode.value === 'create' && password.value !== confirmPassword.value) {
+    error.value = "Those passwords don't match.";
     return undefined;
   }
   return attempt(async () => {
@@ -81,8 +87,18 @@ function submit() {
           type="password"
           required
           :autocomplete="mode === 'create' ? 'new-password' : 'current-password'"
-          placeholder="Password"
-          aria-label="Password"
+          :placeholder="mode === 'create' ? 'New password' : 'Password'"
+          :aria-label="mode === 'create' ? 'New password' : 'Password'"
+        />
+        <input
+          v-if="!auth.devAuth && mode === 'create'"
+          v-model="confirmPassword"
+          class="input"
+          type="password"
+          required
+          autocomplete="new-password"
+          placeholder="Confirm password"
+          aria-label="Confirm password"
         />
         <p v-if="error" class="danger label" role="alert">{{ error }}</p>
         <p v-if="notice" class="accent label" role="status">{{ notice }}</p>
