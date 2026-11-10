@@ -18,7 +18,8 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Breathing room under the tab bar, above the home indicator or screen edge. */
-  --nav-bottom: calc(var(--safe-bottom) + 10px);
+  --nav-bottom: calc(var(--safe-bottom) + 12px);
+  --nav-side: max(12px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   color-scheme: dark;
 }
 
@@ -154,7 +155,7 @@ h1, h2, h3, p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .pull.spin svg { animation: none; } }
 
 /* Bottom navigation */
-.tabbar { position: absolute; z-index: 20; inset: auto 0 0 0; height: calc(var(--tabbar) + var(--nav-bottom)); padding-bottom: var(--nav-bottom); display: flex; background: var(--bg); border-top: 1px solid var(--border-subtle); }
+.tabbar { position: absolute; z-index: 20; left: var(--nav-side); right: var(--nav-side); bottom: var(--nav-bottom); height: var(--tabbar); display: flex; border-radius: 24px; background: rgba(31, 37, 48, 0.92); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid var(--border-subtle); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
 .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-muted); font-size: 13px; font-weight: 500; position: relative; min-width: 0; }
 .tabbar a.router-link-active { color: var(--accent); font-weight: 600; }
 .tabbar .count { position: absolute; top: 6px; left: calc(50% + 6px); }
@@ -163,7 +164,7 @@ h1, h2, h3, p { margin: 0; }
 .sidebar { display: none; }
 
 /* Player */
-.mini { position: absolute; z-index: 21; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabbar) + var(--nav-bottom) + 8px); height: var(--mini); display: flex; align-items: center; gap: 12px; padding: 8px 8px 10px 12px; border-radius: 16px; background: var(--surface-raised); overflow: hidden; cursor: pointer; }
+.mini { position: absolute; z-index: 21; left: var(--nav-side); right: var(--nav-side); bottom: calc(var(--tabbar) + var(--nav-bottom) + 8px); height: var(--mini); display: flex; align-items: center; gap: 12px; padding: 8px 8px 10px 12px; border-radius: 16px; background: var(--surface-raised); overflow: hidden; cursor: pointer; }
 .mini .progress { position: absolute; left: 16px; right: 16px; bottom: 2px; height: 2px; background: transparent; }
 .mini .progress i, .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .bar { height: 6px; border-radius: 3px; background: var(--border-subtle); overflow: hidden; }
