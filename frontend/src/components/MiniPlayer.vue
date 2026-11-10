@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import VolumeControl from './VolumeControl.vue';
 import { artistNames, duration } from '../lib/format.js';
 import { expiryState } from '../lib/offlineRules.js';
 import { usePlayer } from '../stores/player.js';
@@ -34,8 +35,9 @@ const offlineLabel = computed(() =>
         <span>{{ duration(player.length * 1000) }}</span>
       </div>
     </div>
-    <div class="player-center" style="flex: 1; align-items: flex-end" @click.stop>
+    <div class="player-center" style="flex: 1; align-items: flex-end; gap: 4px" @click.stop>
       <span v-if="offlineLabel" class="badge ok">{{ offlineLabel }}</span>
+      <VolumeControl v-model="player.volume" style="width: 100%; max-width: 200px" />
     </div>
     <button class="icon-btn fill mini-toggle big" :aria-label="player.playing ? 'Pause' : 'Play'" @click.stop="player.toggle()">
       <Icon :name="player.playing ? 'pause' : 'play'" />

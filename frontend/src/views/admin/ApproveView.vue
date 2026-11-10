@@ -1,13 +1,15 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Cover from '../../components/Cover.vue';
 import Icon from '../../components/Icon.vue';
 import LabelsForm from '../../components/LabelsForm.vue';
+import VolumeControl from '../../components/VolumeControl.vue';
 import { api } from '../../lib/api.js';
 import { applyMatchCover } from '../../lib/artwork.js';
 import { artistNames, bytes, duration, timeAgo } from '../../lib/format.js';
 import { streamFormat } from '../../lib/streamFormat.js';
+import { loadVolume, saveVolume } from '../../lib/volume.js';
 import { useToast } from '../../stores/toast.js';
 
 const SWIPE_DISTANCE = 110;
@@ -32,6 +34,27 @@ const position = ref(0);
 preview.addEventListener('timeupdate', () => (position.value = preview.currentTime));
 preview.addEventListener('pause', () => (previewing.value = false));
 preview.addEventListener('play', () => (previewing.value = true));
+const previewLength = ref(0);
+preview.addEventListener('loadedmetadata', () => (previewLength.value = Number.isFinite(preview.duration) ? preview.duration : 0));
+
+const volume = ref(loadVolume());
+preview.volume = volume.value;
+watch(volume, (value) => {
+  preview.volume = value;
+  saveVolume(value);
+});
+
+/** Falls back to the song's stored length until the browser knows it. */
+const timelineMax = computed(() => previewLength.value || (card.value?.track?.duration_ms ?? 0) / 1000);
+
+async function seekPreview(seconds) {
+  if (!preview.getAttribute('src')) {
+    await prepare(card.value);
+    startPreview(card.value);
+  }
+  preview.currentTime = seconds;
+  position.value = seconds;
+}
 
 const previewUrls = new Map();
 
@@ -45,6 +68,7 @@ async function prepare(item) {
 function startPreview(item) {
   preview.pause();
   position.value = 0;
+  previewLength.value = 0;
   const url = previewUrls.get(item?.id);
   prepare(queue.value[selected.value + 1]);
   if (!url) {
@@ -133,7 +157,7 @@ const cardStyle = computed(() => ({
 let startX = 0;
 
 function pointerDown(event) {
-  if (event.target.closest('button')) return;
+  if (event.target.closest('button, input')) return;
   startX = event.clientX;
   drag.value = { x: 0, active: true };
   event.currentTarget.setPointerCapture(event.pointerId);
@@ -211,7 +235,11 @@ onBeforeUnmount(() => {
       <LabelsForm ref="form" :key="card.id" :track="card.track" :score="card.track.acoustid_score" />
       <div class="row">
         <button class="icon-btn ring" :aria-label="previewing ? 'Pause preview' : 'Play preview'" @click="togglePreview"><Icon :name="previewing ? 'pause' : 'play'" :size="20" /></button>
-        <span class="muted label">{{ duration(position * 1000) }} / {{ duration(card.track.duration_ms) }}</span>
+        <input class="seek grow" type="range" min="0" :max="timelineMax" step="1" :value="position" aria-label="Preview position" @input="seekPreview(Number($event.target.value))" />
+        <span class="muted label">{{ duration(position * 1000) }} / {{ duration(timelineMax * 1000) }}</span>
+      </div>
+      <VolumeControl v-model="volume" style="max-width: 280px" />
+      <div class="row">
         <span class="muted label grow truncate">Uploaded by {{ card.uploaded_by }} · {{ timeAgo(card.created_at) }} · {{ card.original_filename }} ({{ bytes(card.size_bytes) }})</span>
       </div>
       <div class="row spread">
@@ -243,8 +271,13 @@ onBeforeUnmount(() => {
         <div v-if="card.will_restore?.length" class="notice"><Icon name="warning" /> Approving brings back: {{ card.will_restore.join(', ') }}</div>
         <div class="row">
           <button class="icon-btn fill" style="background: var(--text)" :aria-label="previewing ? 'Pause preview' : 'Play preview'" @click="togglePreview"><Icon :name="previewing ? 'pause' : 'play'" :size="20" /></button>
-          <div class="bar grow"><i :style="{ width: `${(position * 100000) / (card.track?.duration_ms || 1)}%`, background: 'var(--text)' }" /></div>
+          <input class="seek grow" type="range" min="0" :max="timelineMax" step="1" :value="position" aria-label="Preview position" @input="seekPreview(Number($event.target.value))" />
         </div>
+        <div class="row spread muted label">
+          <span>{{ duration(position * 1000) }}</span>
+          <span>{{ duration(timelineMax * 1000) }}</span>
+        </div>
+        <VolumeControl v-model="volume" />
         <p class="muted label">Uploaded by {{ card.uploaded_by }} · {{ timeAgo(card.created_at) }}</p>
       </article>
     </div>

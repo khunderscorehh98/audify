@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import VolumeControl from './VolumeControl.vue';
 import { api } from '../lib/api.js';
 import { artistNames, duration } from '../lib/format.js';
 import { expiryState } from '../lib/offlineRules.js';
@@ -74,6 +75,7 @@ async function toggleLike() {
           <button class="icon-btn" aria-label="Next" @click="player.next()"><Icon name="next" :size="32" /></button>
           <button class="icon-btn" :class="{ 'toggle-on': player.repeat }" aria-label="Repeat" :aria-pressed="player.repeat" @click="player.repeat = !player.repeat"><Icon name="repeat" /></button>
         </div>
+        <VolumeControl v-model="player.volume" />
         <div class="row spread">
           <button class="btn outline" @click="sheet.openQueue()"><Icon name="queue" /> Up next</button>
           <button class="btn outline" @click="sheet.openPlaylist(track)"><Icon name="plus" /> Add to playlist</button>

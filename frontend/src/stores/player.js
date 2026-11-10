@@ -4,6 +4,7 @@ import { api } from '../lib/api.js';
 import { artistNames, uuid } from '../lib/format.js';
 import * as offline from '../lib/offline.js';
 import { removeFromQueue } from '../lib/queueRules.js';
+import { loadVolume, saveVolume } from '../lib/volume.js';
 import { useToast } from './toast.js';
 import {
   BITRATES,
@@ -57,6 +58,12 @@ export const usePlayer = defineStore('player', () => {
   const activeFormat = ref(null);
   const isOffline = shallowRef(null); // the saved copy, when playing from one
   const loading = ref(false);
+  const volume = ref(loadVolume());
+  audio.volume = volume.value;
+  watch(volume, (value) => {
+    audio.volume = value;
+    saveVolume(value);
+  });
 
   const current = computed(() => queue.value[index.value] ?? null);
   const upNext = computed(() => queue.value.slice(index.value + 1, index.value + 6));
@@ -447,5 +454,6 @@ export const usePlayer = defineStore('player', () => {
     patchTrack,
     removeTracks,
     stop,
+    volume,
   };
 });

@@ -39,6 +39,8 @@ const PATHS = {
   users: 'M9 5a3.500 3.500 0 1 0 0 7 3.500 3.500 0 0 0 0-7zM2 20c.8-3.500 3.500-5 7-5s6.200 1.500 7 5M16 5a3.500 3.500 0 0 1 0 7M18 15c2 .6 3.400 2.200 4 5',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   mail: 'M3 6h18v13H3zM3 7l9 7 9-7',
+  volume: 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12',
+  'volume-off': 'M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6',
   signout: 'M10 4H5v16h5M15 8l4 4-4 4M19 12H9',
 };
 </script>

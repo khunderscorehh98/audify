@@ -176,6 +176,10 @@ h1, h2, h3, p { margin: 0; }
 .controls .play { width: 88px; height: 88px; border-radius: 44px; background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; }
 .toggle-on { color: var(--accent); }
 
+/* Volume */
+.volume { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.volume .seek { flex: 1; min-width: 72px; }
+
 /* Sheets, dialogs, toast */
 .scrim { position: fixed; z-index: 50; inset: 0 0 calc(var(--viewport-gap) * -1) 0; background: rgba(5, 7, 10, 0.72); display: flex; align-items: flex-end; justify-content: center; padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); }
 .sheet { width: 100%; max-width: 480px; max-height: 80vh; overflow-x: hidden; overflow-y: auto; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
