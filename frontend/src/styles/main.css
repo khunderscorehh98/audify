@@ -17,6 +17,8 @@
   --viewport-gap: 0px; /* Set by viewportFix.js on installed iPhones. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Breathing room under the tab bar, above the home indicator or screen edge. */
+  --nav-bottom: calc(var(--safe-bottom) + 10px);
   color-scheme: dark;
 }
 
@@ -57,8 +59,8 @@ h1, h2, h3, p { margin: 0; }
 
 /* Layout shell */
 .shell { display: flex; height: 100%; min-height: 0; }
-.main { flex: 1; min-width: 0; overflow-x: hidden; overflow-y: auto; padding: calc(16px + var(--safe-top)) var(--gutter) calc(var(--tabbar) + var(--safe-bottom) + 24px); }
-.main.has-player { padding-bottom: calc(var(--tabbar) + var(--mini) + var(--safe-bottom) + 32px); }
+.main { flex: 1; min-width: 0; overflow-x: hidden; overflow-y: auto; padding: calc(16px + var(--safe-top)) var(--gutter) calc(var(--tabbar) + var(--nav-bottom) + 24px); }
+.main.has-player { padding-bottom: calc(var(--tabbar) + var(--mini) + var(--nav-bottom) + 32px); }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .row.spread { justify-content: space-between; }
@@ -152,7 +154,7 @@ h1, h2, h3, p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .pull.spin svg { animation: none; } }
 
 /* Bottom navigation */
-.tabbar { position: absolute; z-index: 20; inset: auto 0 0 0; height: calc(var(--tabbar) + var(--safe-bottom)); padding-bottom: var(--safe-bottom); display: flex; background: var(--bg); border-top: 1px solid var(--border-subtle); }
+.tabbar { position: absolute; z-index: 20; inset: auto 0 0 0; height: calc(var(--tabbar) + var(--nav-bottom)); padding-bottom: var(--nav-bottom); display: flex; background: var(--bg); border-top: 1px solid var(--border-subtle); }
 .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--text-muted); font-size: 13px; font-weight: 500; position: relative; min-width: 0; }
 .tabbar a.router-link-active { color: var(--accent); font-weight: 600; }
 .tabbar .count { position: absolute; top: 6px; left: calc(50% + 6px); }
@@ -161,7 +163,7 @@ h1, h2, h3, p { margin: 0; }
 .sidebar { display: none; }
 
 /* Player */
-.mini { position: absolute; z-index: 21; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabbar) + var(--safe-bottom) + 8px); height: var(--mini); display: flex; align-items: center; gap: 12px; padding: 8px 8px 10px 12px; border-radius: 16px; background: var(--surface-raised); overflow: hidden; cursor: pointer; }
+.mini { position: absolute; z-index: 21; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(var(--tabbar) + var(--nav-bottom) + 8px); height: var(--mini); display: flex; align-items: center; gap: 12px; padding: 8px 8px 10px 12px; border-radius: 16px; background: var(--surface-raised); overflow: hidden; cursor: pointer; }
 .mini .progress { position: absolute; left: 16px; right: 16px; bottom: 2px; height: 2px; background: transparent; }
 .mini .progress i, .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .bar { height: 6px; border-radius: 3px; background: var(--border-subtle); overflow: hidden; }
@@ -203,7 +205,7 @@ h1, h2, h3, p { margin: 0; }
 .scrim { position: fixed; z-index: 50; inset: 0 0 calc(var(--viewport-gap) * -1) 0; background: rgba(5, 7, 10, 0.72); display: flex; align-items: flex-end; justify-content: center; padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); }
 .sheet { width: 100%; max-width: 480px; max-height: 80vh; overflow-x: hidden; overflow-y: auto; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .sheet-action { display: flex; align-items: center; gap: 16px; min-height: 48px; width: 100%; text-align: left; }
-.toast { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: calc(var(--tabbar) + var(--mini) + var(--safe-bottom) + 20px); max-width: 480px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 16px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 500; }
+.toast { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: calc(var(--tabbar) + var(--mini) + var(--nav-bottom) + 20px); max-width: 480px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 16px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 500; }
 .toast button { font-weight: 700; text-decoration: underline; color: var(--bg); min-height: 28px; }
 
 /* Toggle */
