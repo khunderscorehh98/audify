@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import Icon from './Icon.vue';
+import RangeSlider from './RangeSlider.vue';
 import { volumeAdjustable } from '../lib/volume.js';
 
 const props = defineProps({ modelValue: { type: Number, required: true } });
@@ -29,15 +30,6 @@ function toggleMute() {
     <button class="icon-btn" :aria-label="muted ? 'Unmute' : 'Mute'" @click="toggleMute">
       <Icon :name="muted ? 'volume-off' : 'volume'" :size="20" />
     </button>
-    <input
-      class="seek"
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      :value="modelValue"
-      aria-label="Volume"
-      @input="set(Number($event.target.value))"
-    />
+    <RangeSlider :value="modelValue" :max="1" :step="0.01" label="Volume" @change="set" />
   </div>
 </template>

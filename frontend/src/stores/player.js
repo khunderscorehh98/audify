@@ -3,7 +3,8 @@ import { computed, ref, shallowRef, watch } from 'vue';
 import { api } from '../lib/api.js';
 import { artistNames, uuid } from '../lib/format.js';
 import * as offline from '../lib/offline.js';
-import { removeFromQueue } from '../lib/queueRules.js';
+import * as dataSaver from '../lib/dataSaver.js';
+import { nextIndex, nextRepeatMode, previousIndex, removeFromQueue, reshuffle, shuffleWithFirst } from '../lib/queueRules.js';
 import { loadVolume, saveVolume } from '../lib/volume.js';
 import { useToast } from './toast.js';
 import {
@@ -52,8 +53,25 @@ export const usePlayer = defineStore('player', () => {
   const playing = ref(false);
   const position = ref(0);
   const length = ref(0);
-  const shuffle = ref(false);
-  const repeat = ref(false);
+  const ORDER_KEY = 'audify.playOrder';
+  const savedOrder = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(ORDER_KEY)) ?? {};
+    } catch {
+      return {};
+    }
+  })();
+  const shuffle = ref(savedOrder.shuffle === true);
+  const repeat = ref(['off', 'all', 'one'].includes(savedOrder.repeat) ? savedOrder.repeat : 'off'); // off | all | one
+  watch([shuffle, repeat], () => {
+    try {
+      localStorage.setItem(ORDER_KEY, JSON.stringify({ shuffle: shuffle.value, repeat: repeat.value }));
+    } catch {
+      // Not remembered in private mode.
+    }
+  });
+  // The list as it was given, so turning shuffle off restores its order.
+  let original = [];
   const expanded = ref(false);
   const activeFormat = ref(null);
   const isOffline = shallowRef(null); // the saved copy, when playing from one
@@ -134,6 +152,20 @@ export const usePlayer = defineStore('player', () => {
 
     const saved = await offline.usableCopy(track.id);
     if (current.value?.id !== track.id) return; // Stopped or skipped while waiting.
+
+    // Save mobile data: move on to the next song saved on this device.
+    if (!saved && dataSaver.blocked.value) {
+      loading.value = false;
+      const nextSaved = await findSavedFrom(index.value + 1);
+      if (nextSaved === -1) {
+        audio.pause();
+        playing.value = false;
+        toast.show(dataSaver.BLOCKED_MESSAGE);
+        return;
+      }
+      index.value = nextSaved;
+      return load(autoplay);
+    }
     isOffline.value = saved;
     wasOffline = Boolean(saved);
     audio.preload = 'auto';
@@ -162,6 +194,13 @@ export const usePlayer = defineStore('player', () => {
     }
   }
 
+  async function findSavedFrom(start) {
+    for (let position = start; position < queue.value.length; position += 1) {
+      if (await offline.usableCopy(queue.value[position].id)) return position;
+    }
+    return -1;
+  }
+
   function playList(tracks, start = 0, { name = '', kind = 'Playlist' } = {}) {
     closePlay();
     // iOS only allows play() during a tap, and load() waits on storage and the
@@ -171,7 +210,8 @@ export const usePlayer = defineStore('player', () => {
       audio.src = silentWav();
       audio.play().catch(() => {});
     }
-    queue.value = shuffle.value ? shuffled(tracks, start) : tracks;
+    original = [...tracks];
+    queue.value = shuffle.value ? shuffleWithFirst(tracks, start) : [...tracks];
     index.value = shuffle.value ? 0 : start;
     sourceName.value = name;
     sourceKind.value = kind;
@@ -179,66 +219,94 @@ export const usePlayer = defineStore('player', () => {
     return load(true);
   }
 
-  function shuffled(tracks, keep) {
-    const rest = tracks.filter((_, position_) => position_ !== keep);
-    for (let i = rest.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
-    }
-    return [tracks[keep], ...rest];
-  }
-
   const toggle = () => {
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
   };
 
+  /** Next button and end of song. Repeat one only loops at the end, not on Next. */
   function next(auto = false) {
-    if (index.value + 1 < queue.value.length) {
-      index.value += 1;
-      load(true);
-    } else if (repeat.value && queue.value.length) {
-      index.value = 0;
-      load(true);
-    } else if (auto) {
-      closePlay();
-      playing.value = false;
+    const target = nextIndex(index.value, queue.value.length, repeat.value);
+    if (target === -1) {
+      if (auto) {
+        closePlay();
+        playing.value = false;
+      }
+      return;
     }
+    // Repeat all with shuffle: each lap gets a new order.
+    if (target === 0 && shuffle.value && queue.value.length > 1) {
+      queue.value = reshuffle(queue.value, current.value?.id);
+    }
+    index.value = target;
+    nextStream = null;
+    load(true);
   }
 
-  function previous() {
-    if (audio.currentTime > 3 || index.value <= 0) audio.currentTime = 0;
-    else {
-      index.value -= 1;
-      load(true);
-    }
+  function replayCurrent() {
+    closePlay();
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
   }
+
+  /** More than 3 seconds in, Previous restarts the song, like most players. */
+  function previous() {
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    const target = previousIndex(index.value, queue.value.length, repeat.value);
+    if (target === index.value) {
+      audio.currentTime = 0;
+      return;
+    }
+    index.value = target;
+    nextStream = null;
+    load(true);
+  }
+
+  const cycleRepeat = () => {
+    repeat.value = nextRepeatMode(repeat.value);
+  };
 
   const seek = (seconds) => {
     audio.currentTime = seconds;
     position.value = seconds;
   };
 
+  /** The current song keeps playing either way. */
   function toggleShuffle() {
     shuffle.value = !shuffle.value;
-    if (shuffle.value && current.value) {
-      queue.value = shuffled(queue.value, index.value);
+    const playingNow = current.value;
+    nextStream = null;
+    if (!playingNow) return;
+    if (shuffle.value) {
+      queue.value = shuffleWithFirst(queue.value, index.value);
       index.value = 0;
-      nextStream = null;
+    } else {
+      // Back to the list's own order, carrying on from the current song.
+      queue.value = [...original];
+      index.value = Math.max(original.findIndex((track) => track.id === playingNow.id), 0);
     }
   }
 
   function addToQueue(track) {
     queue.value = [...queue.value.slice(0, index.value + 1), track, ...queue.value.slice(index.value + 1)];
+    // Also in the list's own order, so it survives turning shuffle off.
+    const at = original.findIndex((item) => item.id === current.value?.id);
+    original = [...original.slice(0, at + 1), track, ...original.slice(at + 1)];
   }
 
   function patchTrack(id, changes) {
     queue.value = queue.value.map((track) => (track.id === id ? { ...track, ...changes } : track));
+    original = original.map((track) => (track.id === id ? { ...track, ...changes } : track));
   }
 
   /** Takes songs off this device's queue, moving on if one was playing. */
   function removeTracks(ids) {
     const wasPlaying = playing.value;
+    const gone = new Set(ids);
+    original = original.filter((track) => !gone.has(track.id));
     const result = removeFromQueue(queue.value, index.value, ids);
     if (!result.currentRemoved) {
       queue.value = result.queue;
@@ -280,6 +348,7 @@ export const usePlayer = defineStore('player', () => {
     audio.removeAttribute('src');
     audio.load(); // Also ends the download, which pausing alone doesn't.
     queue.value = [];
+    original = [];
     index.value = -1;
     playing.value = false;
     position.value = 0;
@@ -301,7 +370,7 @@ export const usePlayer = defineStore('player', () => {
       nextStream = { id: nextTrack.id, pending: true };
       offline
         .usableCopy(nextTrack.id)
-        .then((saved) => (saved ? { id: nextTrack.id } : streamFor(nextTrack)))
+        .then((saved) => (saved || dataSaver.blocked.value ? { id: nextTrack.id } : streamFor(nextTrack)))
         .then((stream) => {
           nextStream = stream;
         })
@@ -403,7 +472,7 @@ export const usePlayer = defineStore('player', () => {
       }
     }
   });
-  audio.addEventListener('ended', () => next(true));
+  audio.addEventListener('ended', () => (repeat.value === 'one' ? replayCurrent() : next(true)));
   audio.addEventListener('error', async () => {
     const track = current.value;
     if (!track || !audio.getAttribute('src') || audio.src.startsWith('data:')) return;
@@ -424,6 +493,14 @@ export const usePlayer = defineStore('player', () => {
   });
 
   window.addEventListener('pagehide', closePlay);
+
+  // Switched to mobile data, or the setting turned on, mid-stream: stop it.
+  watch(dataSaver.blocked, (isBlocked) => {
+    if (isBlocked && current.value && !isOffline.value && playing.value) {
+      audio.pause();
+      toast.show(dataSaver.BLOCKED_MESSAGE);
+    }
+  });
   watch(current, (track) => {
     document.title = track ? `${track.title} · Audify` : 'Audify';
   });
@@ -454,6 +531,7 @@ export const usePlayer = defineStore('player', () => {
     patchTrack,
     removeTracks,
     stop,
+    cycleRepeat,
     volume,
   };
 });

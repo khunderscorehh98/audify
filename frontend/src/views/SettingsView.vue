@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import SignOutButton from '../components/SignOutButton.vue';
+import * as dataSaver from '../lib/dataSaver.js';
 import { formatLabel, losslessEnabled, readUsage, setLossless, streamFormat } from '../lib/streamFormat.js';
 import { useSession } from '../stores/session.js';
 
@@ -50,6 +51,15 @@ function toggleLossless() {
           <div class="muted label">Uses far more data. Turn on only when you're on Wi-Fi.</div>
         </div>
         <button class="switch" role="switch" :aria-checked="lossless" aria-label="Lossless" @click="toggleLossless"><i /></button>
+      </div>
+      <div class="row spread" style="padding: 16px">
+        <div class="grow">
+          <div>Save mobile data</div>
+          <div class="muted label">
+            {{ dataSaver.canDetect ? 'Plays only saved songs when on mobile data. Wi-Fi streams as normal.' : 'Plays only saved songs while this is on. Turn it off on Wi-Fi to stream.' }}
+          </div>
+        </div>
+        <button class="switch" role="switch" :aria-checked="dataSaver.enabled.value" aria-label="Save mobile data" @click="dataSaver.toggle()"><i /></button>
       </div>
     </div>
 

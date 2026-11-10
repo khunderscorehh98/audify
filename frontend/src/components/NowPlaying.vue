@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import RangeSlider from './RangeSlider.vue';
 import VolumeControl from './VolumeControl.vue';
 import { api } from '../lib/api.js';
 import { artistNames, duration } from '../lib/format.js';
@@ -62,18 +63,18 @@ async function toggleLike() {
           <span v-if="player.activeFormat" class="badge">{{ formatLabel(player.activeFormat) }}</span>
         </div>
         <div>
-          <input class="seek" type="range" min="0" :max="player.length || 0" step="1" :value="player.position" aria-label="Seek" @input="player.seek(Number($event.target.value))" />
+          <RangeSlider :value="player.position" :max="player.length" label="Seek" @change="player.seek" />
           <div class="row spread muted label">
             <span>{{ duration(player.position * 1000) }}</span>
             <span>{{ duration((player.length || track.duration_ms / 1000) * 1000) }}</span>
           </div>
         </div>
         <div class="controls">
-          <button class="icon-btn" :class="{ 'toggle-on': player.shuffle }" aria-label="Shuffle" :aria-pressed="player.shuffle" @click="player.toggleShuffle()"><Icon name="shuffle" /></button>
+          <button class="icon-btn mode-btn" :class="{ 'toggle-on': player.shuffle }" aria-label="Shuffle" :aria-pressed="player.shuffle" @click="player.toggleShuffle()"><Icon name="shuffle" /></button>
           <button class="icon-btn" aria-label="Previous" @click="player.previous()"><Icon name="prev" :size="32" /></button>
           <button class="play" :aria-label="player.playing ? 'Pause' : 'Play'" @click="player.toggle()"><Icon :name="player.playing ? 'pause' : 'play'" :size="36" /></button>
           <button class="icon-btn" aria-label="Next" @click="player.next()"><Icon name="next" :size="32" /></button>
-          <button class="icon-btn" :class="{ 'toggle-on': player.repeat }" aria-label="Repeat" :aria-pressed="player.repeat" @click="player.repeat = !player.repeat"><Icon name="repeat" /></button>
+          <button class="icon-btn mode-btn" :class="{ 'toggle-on': player.repeat !== 'off' }" :aria-label="`Repeat: ${player.repeat === 'one' ? 'this song' : player.repeat}`" @click="player.cycleRepeat()"><Icon :name="player.repeat === 'one' ? 'repeat-one' : 'repeat'" /></button>
         </div>
         <VolumeControl v-model="player.volume" />
         <div class="row spread">

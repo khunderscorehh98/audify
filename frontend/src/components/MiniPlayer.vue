@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import Cover from './Cover.vue';
 import Icon from './Icon.vue';
+import RangeSlider from './RangeSlider.vue';
 import VolumeControl from './VolumeControl.vue';
 import { artistNames, duration } from '../lib/format.js';
 import { expiryState } from '../lib/offlineRules.js';
@@ -31,7 +32,7 @@ const offlineLabel = computed(() =>
       </div>
       <div class="times label muted">
         <span>{{ duration(player.position * 1000) }}</span>
-        <input class="seek" type="range" min="0" :max="player.length || 0" step="1" :value="player.position" aria-label="Seek" @input="player.seek(Number($event.target.value))" />
+        <RangeSlider :value="player.position" :max="player.length" label="Seek" @change="player.seek" />
         <span>{{ duration(player.length * 1000) }}</span>
       </div>
     </div>

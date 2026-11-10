@@ -5,6 +5,7 @@ import Cover from '../../components/Cover.vue';
 import Icon from '../../components/Icon.vue';
 import LabelsForm from '../../components/LabelsForm.vue';
 import VolumeControl from '../../components/VolumeControl.vue';
+import RangeSlider from '../../components/RangeSlider.vue';
 import { api } from '../../lib/api.js';
 import { applyMatchCover } from '../../lib/artwork.js';
 import { artistNames, bytes, duration, timeAgo } from '../../lib/format.js';
@@ -235,7 +236,7 @@ onBeforeUnmount(() => {
       <LabelsForm ref="form" :key="card.id" :track="card.track" :score="card.track.acoustid_score" />
       <div class="row">
         <button class="icon-btn ring" :aria-label="previewing ? 'Pause preview' : 'Play preview'" @click="togglePreview"><Icon :name="previewing ? 'pause' : 'play'" :size="20" /></button>
-        <input class="seek grow" type="range" min="0" :max="timelineMax" step="1" :value="position" aria-label="Preview position" @input="seekPreview(Number($event.target.value))" />
+        <RangeSlider class="grow" :value="position" :max="timelineMax" label="Preview position" @change="seekPreview" />
         <span class="muted label">{{ duration(position * 1000) }} / {{ duration(timelineMax * 1000) }}</span>
       </div>
       <VolumeControl v-model="volume" style="max-width: 280px" />
@@ -271,7 +272,7 @@ onBeforeUnmount(() => {
         <div v-if="card.will_restore?.length" class="notice"><Icon name="warning" /> Approving brings back: {{ card.will_restore.join(', ') }}</div>
         <div class="row">
           <button class="icon-btn fill" style="background: var(--text)" :aria-label="previewing ? 'Pause preview' : 'Play preview'" @click="togglePreview"><Icon :name="previewing ? 'pause' : 'play'" :size="20" /></button>
-          <input class="seek grow" type="range" min="0" :max="timelineMax" step="1" :value="position" aria-label="Preview position" @input="seekPreview(Number($event.target.value))" />
+          <RangeSlider class="grow" :value="position" :max="timelineMax" label="Preview position" @change="seekPreview" />
         </div>
         <div class="row spread muted label">
           <span>{{ duration(position * 1000) }}</span>

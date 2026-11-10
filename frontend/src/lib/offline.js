@@ -4,6 +4,7 @@
 import { openDB } from 'idb';
 import { CacheExpiration } from 'workbox-expiration';
 import { api } from './api.js';
+import * as dataSaver from './dataSaver.js';
 import { streamFormat, addUsage } from './streamFormat.js';
 import { LIFETIME_SECONDS, artworkToDelete } from './offlineRules.js';
 
@@ -67,6 +68,7 @@ async function saveArtwork(db, cover) {
  */
 export async function saveTrack(track) {
   if (!supported) throw new Error(UNSUPPORTED_MESSAGE);
+  if (dataSaver.blocked.value) throw new Error('Save mobile data is on. Save songs on Wi-Fi.');
   const db = await dbPromise;
   const format = streamFormat(); // Q7: offline is always the streaming format.
   const stream = await api.get(`/tracks/${track.id}/stream?format=${format}`);
@@ -106,12 +108,13 @@ export async function saveTrack(track) {
 }
 
 /** Saves a list, reporting progress; one failed song doesn't stop the rest. */
-export async function saveTracks(tracks, onProgress = () => {}) {
+export async function saveTracks(tracks, onProgress = () => {}, shouldStop = () => false) {
   const saved = new Set((await listSaved()).map((item) => item.id));
   const todo = tracks.filter((track) => !saved.has(track.id));
   let done = 0;
   let failed = 0;
   for (const track of todo) {
+    if (shouldStop()) break;
     try {
       await saveTrack(track);
     } catch {
