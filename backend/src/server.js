@@ -7,6 +7,7 @@ import { createR2Storage } from './storage/r2.js';
 import { createLocalStorage } from './storage/local.js';
 import { startJobs } from './jobs.js';
 import { createMusicBrainz } from './lib/musicbrainz.js';
+import { createDeezer } from './lib/deezer.js';
 
 const config = loadConfig();
 const db = createPool(config);
@@ -14,7 +15,8 @@ const verifier = config.devMode ? createDevVerifier() : createFirebaseVerifier(c
 const storage = config.storageMode === 'local' ? createLocalStorage(config) : createR2Storage(config);
 const dispatcher = createDispatcher(config);
 const musicbrainz = createMusicBrainz({ contact: config.musicbrainzContact });
-const deps = { db, config, verifier, storage, dispatcher, musicbrainz };
+const deezer = createDeezer();
+const deps = { db, config, verifier, storage, dispatcher, musicbrainz, deezer };
 
 const app = createApp(deps);
 if (config.jobsEnabled) startJobs(deps);

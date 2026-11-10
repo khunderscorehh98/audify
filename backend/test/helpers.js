@@ -60,7 +60,11 @@ export async function startTestApp(overrides = {}) {
     cover: async () => ({ type: 'image/jpeg', body: Buffer.from('jpeg') }),
     genres: async () => ['Indie pop'],
   };
-  const deps = { db, config, verifier: createDevVerifier(), storage, dispatcher, musicbrainz };
+  const deezer = {
+    search: async () => [{ title: 'From Deezer', source: 'deezer' }],
+    cover: async () => ({ type: 'image/jpeg', body: Buffer.from('jpeg') }),
+  };
+  const deps = { db, config, verifier: createDevVerifier(), storage, dispatcher, musicbrainz, deezer };
   const app = createApp(deps);
   const server = await new Promise((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener));

@@ -31,9 +31,10 @@ export async function replaceArtwork(albumId, file) {
  * answer after saving, since picking a match can change the album. An album
  * that already has a cover keeps it; Replace artwork is there for that.
  */
-export async function applyMatchCover(releaseId, saved) {
-  if (!releaseId || !saved?.album_id || saved.album_has_cover) return false;
-  const image = await api.blob(`/admin/lookup/cover/${releaseId}`);
+export async function applyMatchCover(cover, saved) {
+  if (!cover || !saved?.album_id || saved.album_has_cover) return false;
+  const query = cover.type === 'deezer' ? `deezer=${encodeURIComponent(cover.url)}` : `release=${cover.id}`;
+  const image = await api.blob(`/admin/lookup/cover?${query}`);
   await replaceArtwork(saved.album_id, image);
   return true;
 }

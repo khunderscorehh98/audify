@@ -342,7 +342,21 @@ describe('Audify API', () => {
     });
 
     it('refuses a bad release ID', async () => {
-      assert.equal((await t.call('GET', '/admin/lookup/cover/nonsense', { as: OWNER })).status, 400);
+      assert.equal((await t.call('GET', '/admin/lookup/cover?release=nonsense', { as: OWNER })).status, 400);
+      assert.equal((await t.call('GET', '/admin/lookup/cover', { as: OWNER })).status, 400);
+    });
+
+    it('falls back to Deezer when MusicBrainz finds nothing or is down', async () => {
+      const original = t.deps.musicbrainz.search;
+      t.deps.musicbrainz.search = async () => [];
+      let found = await t.call('POST', '/admin/lookup', { as: OWNER, body: { title: 'Cindai', artist: 'Siti' } });
+      assert.equal(found.body.matches[0].source, 'deezer');
+      t.deps.musicbrainz.search = async () => {
+        throw new Error('down');
+      };
+      found = await t.call('POST', '/admin/lookup', { as: OWNER, body: { title: 'Cindai', artist: 'Siti' } });
+      assert.equal(found.body.matches[0].source, 'deezer');
+      t.deps.musicbrainz.search = original;
     });
 
     it('saves a picked match and reports the album', async () => {

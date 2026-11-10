@@ -26,8 +26,8 @@ const findingGenres = ref(false);
 const picked = ref(null);
 const failedCovers = ref(new Set());
 const canSearch = computed(() => Boolean(form.title.trim() && form.artist.trim()));
-const coverUrl = (match, size = 250) => `https://coverartarchive.org/release/${match.release_id}/front-${size}`;
-const showCover = (match) => match.release_id && !failedCovers.value.has(match.release_id);
+const coverUrl = (match) => match.thumb;
+const showCover = (match) => Boolean(match.thumb) && !failedCovers.value.has(match.thumb);
 
 async function autocomplete() {
   searching.value = true;
@@ -48,7 +48,8 @@ async function pick(match) {
   picked.value = match;
   matches.value = null;
 
-  // Curated genres are better than the search's tags, but take a moment.
+  // Deezer matches bring their album's genres already; MusicBrainz has better ones to fetch.
+  if (!match.recording_id) return;
   findingGenres.value = true;
   const found = await api
     .post('/admin/lookup/genres', {
@@ -116,7 +117,7 @@ function changes() {
     result.genres = [...form.genres];
   }
   // A picked match links the song, its artist and its album to MusicBrainz.
-  if (picked.value) {
+  if (picked.value?.recording_id) {
     result.mb_recording_id = picked.value.recording_id;
     if (picked.value.artist_id && form.artist.trim() === picked.value.artist) {
       result.artist = form.artist.trim();
@@ -130,10 +131,10 @@ function changes() {
   return result;
 }
 
-/** The release whose cover to apply after saving, if a match was picked. */
+/** The cover to apply after saving, if a match was picked and its album kept. */
 const coverRelease = () => {
   const match = picked.value;
-  return match?.release_id && form.album.trim() === match.album ? match.release_id : null;
+  return match?.cover && form.album.trim() === match.album ? match.cover : null;
 };
 
 defineExpose({ changes, coverRelease });
@@ -142,7 +143,7 @@ defineExpose({ changes, coverRelease });
 <template>
   <div class="stack">
     <div class="row">
-      <img v-if="picked && showCover(picked)" :src="coverUrl(picked)" alt="" width="120" height="120" style="border-radius: 8px; object-fit: cover" @error="failedCovers.add(picked.release_id)" />
+      <img v-if="picked && showCover(picked)" :src="coverUrl(picked)" alt="" width="120" height="120" style="border-radius: 8px; object-fit: cover" @error="failedCovers.add(picked.thumb)" />
       <Cover v-else :key="coverKey" :px="120" :cover="track.album?.cover" :seed="track.album?.id ?? track.id" />
       <div class="stack" style="gap: 8px">
         <input ref="picker" type="file" accept="image/*" hidden @change="chooseArtwork($event.target.files[0]); $event.target.value = ''" />
@@ -179,13 +180,14 @@ defineExpose({ changes, coverRelease });
       <div v-if="matches" class="scrim" @click.self="matches = null">
         <div class="sheet" role="dialog" aria-label="Choose a match">
           <div class="heading">Choose a match</div>
-          <p class="muted label">From MusicBrainz. Nothing is saved until you save or approve.</p>
+          <p class="muted label">Nothing is saved until you save or approve.</p>
           <button v-for="match in matches" :key="match.recording_id" class="sheet-action" style="padding: 6px 0" @click="pick(match)">
-            <img v-if="showCover(match)" :src="coverUrl(match)" alt="" width="56" height="56" loading="lazy" style="border-radius: 8px; object-fit: cover; flex: none" @error="failedCovers.add(match.release_id)" />
+            <img v-if="showCover(match)" :src="coverUrl(match)" alt="" width="56" height="56" loading="lazy" style="border-radius: 8px; object-fit: cover; flex: none" @error="failedCovers.add(match.thumb)" />
             <span v-else class="avatar" style="width: 56px; height: 56px; border-radius: 8px"><Icon name="music" /></span>
             <span class="grow">
               <span class="truncate" style="display: block; font-weight: 600">{{ match.title }}</span>
               <span class="truncate muted label" style="display: block">{{ match.artist }}<template v-if="match.album"> · {{ match.album }}</template><template v-if="match.year"> · {{ match.year }}</template></span>
+            <span class="truncate caption muted" style="display: block">From {{ match.source === 'deezer' ? 'Deezer' : 'MusicBrainz' }}</span>
             </span>
           </button>
           <button class="btn outline block" @click="matches = null">None of these</button>

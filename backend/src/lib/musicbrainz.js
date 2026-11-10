@@ -16,6 +16,30 @@ const unavailable = () => new HttpError(502, "Couldn't reach MusicBrainz. Try ag
 /** Quotes a value for MusicBrainz's search syntax. */
 export const searchTerm = (value) => `"${String(value).replace(/[\\"]/g, '\\$&')}"`;
 
+/**
+ * Removes what files and uploads often add but MusicBrainz doesn't use:
+ * "(Official Video)", "[HD]", "feat. Someone". Keeps the original if that
+ * would leave nothing.
+ */
+export function cleanTerm(value) {
+  const cleaned = String(value)
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+    .replace(/\s(feat\.?|ft\.?|featuring)\s.*$/i, ' ')
+    .replace(/\s+-\s+$/, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || String(value).trim();
+}
+
+/** Loose terms: any of the words, ranked by how many match. */
+const looseTerms = (value) =>
+  String(value)
+    .normalize('NFKC')
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
+    .filter(Boolean)
+    .slice(0, 8)
+    .join(' ');
+
 /** The most-voted names, tidied: "indie pop" becomes "Indie pop". */
 export function topGenres(items = []) {
   return [...items]
@@ -50,6 +74,9 @@ export function toMatches(data) {
       release_id: release?.id ?? null,
       year: /^\d{4}/.test(release?.date ?? '') ? Number(release.date.slice(0, 4)) : null,
       genres: topGenres(recording.tags),
+      source: 'musicbrainz',
+      thumb: release?.id ? `${COVER_URL}/${release.id}/front-250` : null,
+      cover: release?.id ? { type: 'caa', id: release.id } : null,
     };
     const key = `${match.title}|${match.artist}|${match.album}`.toLowerCase();
     if (seen.has(key)) continue;
@@ -80,15 +107,21 @@ export function createMusicBrainz({ contact, fetchImpl = fetch }) {
   };
 
   return {
+    /** Exact first; if that finds nothing, a looser search on the cleaned words. */
     async search(title, artist) {
-      const query = new URLSearchParams({
-        query: `recording:${searchTerm(title)} AND artist:${searchTerm(artist)}`,
-        fmt: 'json',
-        limit: '15',
-      });
-      const response = await get(`${SEARCH_URL}?${query}`);
-      if (!response.ok) throw unavailable();
-      return toMatches(await response.json());
+      const run = async (lucene) => {
+        const response = await get(`${SEARCH_URL}?${new URLSearchParams({ query: lucene, fmt: 'json', limit: '15' })}`);
+        if (!response.ok) throw unavailable();
+        return toMatches(await response.json());
+      };
+      const cleanTitle = cleanTerm(title);
+      const cleanArtist = cleanTerm(artist);
+      const exact = await run(`recording:${searchTerm(cleanTitle)} AND artist:${searchTerm(cleanArtist)}`);
+      if (exact.length) return exact;
+      const titleWords = looseTerms(cleanTitle);
+      const artistWords = looseTerms(cleanArtist);
+      if (!titleWords || !artistWords) return [];
+      return run(`recording:(${titleWords}) AND artist:(${artistWords})`);
     },
 
     /** Curated genres: the song's if it has any, then its album's, then its artist's. */

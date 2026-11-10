@@ -48,7 +48,7 @@ const parseLabels = (body = {}) => {
 };
 
 export function adminRouter(deps) {
-  const { db, storage, config, dispatcher, musicbrainz } = deps;
+  const { db, storage, config, dispatcher, musicbrainz, deezer } = deps;
   const router = Router();
   router.use(requireAdmin);
 
@@ -76,7 +76,24 @@ export function adminRouter(deps) {
   router.post('/lookup', async (req, res) => {
     const title = requiredString(req.body?.title, 'Title', 255);
     const artist = requiredString(req.body?.artist, 'Artist', 255);
-    res.json({ matches: await musicbrainz.search(title, artist) });
+    // MusicBrainz first; Deezer only when it finds nothing or can't be reached.
+    let matches = [];
+    let musicbrainzError = null;
+    try {
+      matches = await musicbrainz.search(title, artist);
+    } catch (error) {
+      musicbrainzError = error;
+    }
+    if (!matches.length && deezer) {
+      try {
+        matches = await deezer.search(title, artist);
+      } catch (error) {
+        if (musicbrainzError) throw musicbrainzError;
+      }
+    } else if (musicbrainzError) {
+      throw musicbrainzError;
+    }
+    res.json({ matches });
   });
 
   router.post('/lookup/genres', async (req, res) => {
@@ -88,9 +105,17 @@ export function adminRouter(deps) {
   });
 
   // Images only, so the droplet's "no audio" rule still holds.
-  router.get('/lookup/cover/:releaseId', async (req, res) => {
-    if (!UUID.test(req.params.releaseId)) throw new HttpError(400, 'Invalid release');
-    const cover = await musicbrainz.cover(req.params.releaseId);
+  // ?release=<MusicBrainz release ID> or ?deezer=<Deezer image URL>
+  router.get('/lookup/cover', async (req, res) => {
+    let cover;
+    if (req.query.release !== undefined) {
+      if (!UUID.test(String(req.query.release))) throw new HttpError(400, 'Invalid release');
+      cover = await musicbrainz.cover(String(req.query.release));
+    } else if (req.query.deezer !== undefined && deezer) {
+      cover = await deezer.cover(String(req.query.deezer));
+    } else {
+      throw new HttpError(400, 'Say which cover');
+    }
     if (!cover) throw notFound('This release has no cover');
     res.type(cover.type).send(cover.body);
   });

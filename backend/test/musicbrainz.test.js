@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { bestRelease, createMusicBrainz, searchTerm, toMatches } from '../src/lib/musicbrainz.js';
+import { bestRelease, cleanTerm, createMusicBrainz, searchTerm, toMatches } from '../src/lib/musicbrainz.js';
 
 const recording = (overrides = {}) => ({
   id: 'rec-1',
@@ -24,6 +24,9 @@ describe('MusicBrainz matches', () => {
         release_id: 'rel-1',
         year: 2021,
         genres: ['Indie pop', 'Rock'],
+        source: 'musicbrainz',
+        thumb: 'https://coverartarchive.org/release/rel-1/front-250',
+        cover: { type: 'caa', id: 'rel-1' },
       },
     ]);
   });
@@ -54,6 +57,13 @@ describe('MusicBrainz matches', () => {
     assert.equal(chosen.id, 'album');
   });
 
+  it('cleans what uploads add to titles and artists', () => {
+    assert.equal(cleanTerm('Cindai (Official Music Video) [HD]'), 'Cindai');
+    assert.equal(cleanTerm('Gemilang feat. Someone Else'), 'Gemilang');
+    assert.equal(cleanTerm('Siti Nurhaliza ft. Other'), 'Siti Nurhaliza');
+    assert.equal(cleanTerm('(Untitled)'), '(Untitled)');
+  });
+
   it('escapes search input', () => {
     assert.equal(searchTerm('a"b\\c'), '"a\\"b\\\\c"');
   });
@@ -69,9 +79,21 @@ describe('MusicBrainz client', () => {
         return Response.json({ recordings: [] });
       },
     });
-    await client.search('Northbound', 'Lumen Park');
-    assert.equal(seen.url.searchParams.get('query'), 'recording:"Northbound" AND artist:"Lumen Park"');
+    await client.search('Northbound (Official Video)', 'Lumen Park');
+    assert.equal(seen.url.searchParams.get('query'), 'recording:(Northbound) AND artist:(Lumen Park)');
     assert.match(seen.headers['User-Agent'], /me@example\.com/);
+  });
+
+  it('tries the exact search first, then a looser one', async () => {
+    const queries = [];
+    const client = createMusicBrainz({
+      fetchImpl: async (url) => {
+        queries.push(new URL(url).searchParams.get('query'));
+        return Response.json({ recordings: [] });
+      },
+    });
+    await client.search('Ku Mahu', 'Dato\' Siti Nurhaliza');
+    assert.deepEqual(queries, ['recording:"Ku Mahu" AND artist:"Dato\' Siti Nurhaliza"', 'recording:(Ku Mahu) AND artist:(Dato Siti Nurhaliza)']);
   });
 
   it('looks for genres on the song, then the album, then the artist', async () => {
