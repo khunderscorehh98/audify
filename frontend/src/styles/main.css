@@ -14,7 +14,6 @@
   --gutter: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   --tabbar: 72px;
   --mini: 72px;
-  --viewport-gap: 0px; /* Set by viewportFix.js on installed iPhones. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Breathing room under the tab bar, above the home indicator or screen edge. */
@@ -26,9 +25,9 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 /* Only <main> scrolls. Otherwise iOS can shift the whole page, such as when a
    field is focused, and leave the layout out of place. */
-html, body { height: calc(100% + var(--viewport-gap)); margin: 0; overflow: hidden; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
 /* Anchored to the screen, and the containing block for the tab bar and player. */
-#app { position: fixed; top: 0; left: 0; right: 0; bottom: calc(var(--viewport-gap) * -1); overflow: hidden; }
+#app { position: fixed; inset: 0; overflow: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -170,7 +169,7 @@ h1, h2, h3, p { margin: 0; }
 .bar { height: 6px; border-radius: 3px; background: var(--border-subtle); overflow: hidden; }
 .player-side, .player-center { display: none; }
 
-.now { position: fixed; z-index: 40; inset: 0 0 calc(var(--viewport-gap) * -1) 0; overflow-x: hidden; background: var(--bg); display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top, 0px) + 12px) 24px calc(var(--safe-bottom) + 24px); overflow-y: auto; }
+.now { position: fixed; z-index: 40; inset: 0; overflow-x: hidden; background: var(--bg); display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top, 0px) + 12px) 24px calc(var(--safe-bottom) + 24px); overflow-y: auto; }
 .now-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: center; }
 .now-body { flex: 1; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 520px; margin: 16px auto 0; }
 .now-art { width: 100%; aspect-ratio: 1; border-radius: 24px; max-height: 46vh; max-width: 46vh; margin: 0 auto; }
@@ -203,7 +202,7 @@ h1, h2, h3, p { margin: 0; }
 .volume .seek { flex: 1; min-width: 72px; --fill-colour: var(--text-muted); }
 
 /* Sheets, dialogs, toast */
-.scrim { position: fixed; z-index: 50; inset: 0 0 calc(var(--viewport-gap) * -1) 0; background: rgba(5, 7, 10, 0.72); display: flex; align-items: flex-end; justify-content: center; padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); }
+.scrim { position: fixed; z-index: 50; inset: 0; background: rgba(5, 7, 10, 0.72); display: flex; align-items: flex-end; justify-content: center; padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); }
 .sheet { width: 100%; max-width: 480px; max-height: 80vh; overflow-x: hidden; overflow-y: auto; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
 .sheet-action { display: flex; align-items: center; gap: 16px; min-height: 48px; width: 100%; text-align: left; }
 .toast { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: calc(var(--tabbar) + var(--mini) + var(--nav-bottom) + 20px); max-width: 480px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 16px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 500; }
