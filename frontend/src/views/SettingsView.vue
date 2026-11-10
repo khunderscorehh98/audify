@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import SignOutButton from '../components/SignOutButton.vue';
 import * as dataSaver from '../lib/dataSaver.js';
+import { lastReading } from '../lib/viewportGap.js';
 import { formatLabel, losslessEnabled, readUsage, setLossless, streamFormat } from '../lib/streamFormat.js';
 import { useSession } from '../stores/session.js';
 
@@ -12,6 +13,8 @@ const router = useRouter();
 const lossless = ref(losslessEnabled());
 const format = streamFormat();
 const usage = readUsage();
+// Installed iPhone app only: what iOS reports, for fixing layout problems.
+const screenCheck = navigator.standalone === true ? { ...lastReading } : null;
 
 const total = computed(() => usage.streaming + usage.offline);
 const percent = computed(() => (total.value ? (usage.streaming / total.value) * 100 : 0));
@@ -87,5 +90,8 @@ function toggleLossless() {
     </RouterLink>
 
     <div style="margin-top: 16px"><SignOutButton button-class="btn danger-outline block" /></div>
+    <p v-if="screenCheck" class="caption muted" style="text-align: center">
+      Screen check: {{ screenCheck.fullHeight }} / {{ screenCheck.innerHeight }} / {{ Math.round(screenCheck.safeTop) }} / {{ screenCheck.gap }}
+    </p>
   </div>
 </template>

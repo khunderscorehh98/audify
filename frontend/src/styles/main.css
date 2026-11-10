@@ -26,16 +26,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 /* Only <main> scrolls. Otherwise iOS can shift the whole page, such as when a
    field is focused, and leave the layout out of place. */
-/* Installed iPhone apps with a see-through status bar get a viewport that's
-   short by the status bar's height, which leaves a gap under the tab bar.
-   iOS reports that height itself (safe-area-inset-top), so this needs no
-   measuring. Where the gap doesn't happen, the inset is 0 and nothing changes.
-   -webkit-touch-callout is only supported on iOS. */
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) {
-    :root { --viewport-gap: var(--safe-top); }
-  }
-}
+/* --viewport-gap is set by viewportGap.js, only while iOS is in its short state. */
 html, body { height: calc(100% + var(--viewport-gap)); margin: 0; overflow: hidden; }
 /* Anchored to the screen, and the containing block for the tab bar and player. */
 #app { position: fixed; top: 0; left: 0; right: 0; bottom: calc(var(--viewport-gap) * -1); overflow: hidden; }
